@@ -1,4 +1,5 @@
 import math
+from sklearn.neural_network import MLPClassifier
 
 import board
 import random
@@ -10,6 +11,7 @@ class Node:
     self.boardState = state
     self.children = dict() 
     self.qval = qval
+    self.seen = 0
 
   def findNext(self, m, player):
     one_val = ord(self.boardState[m * 2]) - 48
@@ -25,35 +27,29 @@ class Node:
 class Player:
   
   def __init__(self):
+    self.nn = MLPClassifier(hidden_layer_sizes=(4))
     self.MAX_DEPTH = 10
     self.root = Node('11111111111111', 0)
     self.state = self.root
     self.nodeList = {'11111111111111' : self.root}
-    self.nodeLayers = [{'11111111111111': self.root}]
-    for i in range(self.MAX_DEPTH):
-      self.nodeLayers.append({})
 
   def train(self, learnRate, discFact):
     game = board.Game()
     
-    for i in range(500000):
+    for i in range(1000000):
       currNode = self.root
       currState = '11111111111111'
       r = 0
       game.reset()
-      depth = 0
       while(r == 0):
 
-        m = random.randint(0, 6)
-        r = game.placePiece(m)
-        newKey = currNode.findNext(m, 1)
+        r = -1
         while r == -1:
-          if newKey not in self.nodeList:
-            self.nodeList[newKey] = Node(newKey, -10000000)
-          
           m = random.randint(0,6)
           r = game.placePiece(m)
           newKey = currNode.findNext(m, 1)
+          if r == -1:
+            self.nodeList[newKey] = Node(newKey, -10000000)  
 
         if newKey not in self.nodeList:
           self.nodeList[newKey] = Node(newKey, 0)
@@ -61,8 +57,7 @@ class Player:
         currNode = self.nodeList[newKey]
 
         if r != 1 and r != 2:
-          m = random.randint(0, 6)
-          r =  -1 * game.placePiece(m)
+          r = 1
           while r == 1:
             m = random.randint(0,6)
             r = -1 * game.placePiece(m)
@@ -72,9 +67,68 @@ class Player:
 
         reward = 0
         if r == 1:
-          reward = 10000
+          reward = 100
         elif r == -1:
-          reward = -10000 
+          reward = -100 
+
+        bestChildVal = None
+        seen = 0
+        for n in range(7):
+          nState = tNode.findNext(n, 1)
+          if nState in self.nodeList:
+            if not bestChildVal or self.nodeList[nState].qval > bestChildVal:
+              bestChildVal = self.nodeList[nState].qval
+          else:
+            if not bestChildVal or 0 > bestChildVal:
+              bestChildVal = 0
+
+#        currNode.qval = (1 - learnRate) * currNode.qval + learnRate * (reward + discFact * bestChildVal)
+        currNode.seen += 1
+        currNode.qval = (currNode.seen - 1) / currNode.seen * currNode.qval + (reward + discFact * bestChildVal) / currNode.seen
+
+        currNode = tNode
+
+    dinc = 0
+    for i in range(100000):
+      currNode = self.root
+      currState = '11111111111111'
+      r = 0
+      game.reset()
+      depth = 0
+      while(r == 0):
+        
+        depth += 1
+
+        r = -1
+        while r == -1:
+          if depth < 5:
+            m = self.play(currNode.boardState)
+          else:
+            m = random.randint(0, 6)
+          r = game.placePiece(m)
+          newKey = currNode.findNext(m, 1)
+          if r == -1:
+            self.nodeList[newKey] = Node(newKey, -10000000)  
+
+        if newKey not in self.nodeList:
+          self.nodeList[newKey] = Node(newKey, 0)
+    
+        currNode = self.nodeList[newKey]
+
+        if r != 1 and r != 2:
+          r = 1
+          while r == 1:
+            m = random.randint(0,6)
+            r = -1 * game.placePiece(m)
+
+        currState = currNode.findNext(m, 2)
+        tNode = Node(currState, 0)
+
+        reward = 0
+        if r == 1:
+          reward = 100
+        elif r == -1:
+          reward = -100 
 
         bestChildVal = None
         seen = 0
@@ -88,27 +142,31 @@ class Player:
               bestChildVal = 0
 
         currNode.qval = (1 - learnRate) * currNode.qval + learnRate * (reward + discFact * bestChildVal)
-      
+        currNode.seen += 1
+        #currNode.qval = (currNode.seen - 1) / currNode.seen * currNode.qval + (reward + discFact * bestChildVal) / currNode.seen
+
         currNode = tNode
-        #if currNode.qval != 0 and currNode.qval != 3500 and currNode.qval != -3500:
-        #  print(currNode.qval, flush=True)
 
-    print('done')
+        if i % 10000 == 0:
+          dinc += 1
+          print(i, flush=True)
 
-  def play(self, state):
+  def play(self, state, debug=False):
 
-    bestPlay = (0, None)
+    bestPlay = (random.randint(0, 6), None)
     tNode = Node(state, 0)
 
     for i in range(7):
       nState = tNode.findNext(i, 1)
-      print(nState, flush=True)
+      if debug:
+        print(nState, flush=True)
       if nState in self.nodeList:
-        print(self.nodeList[nState].qval)
+        if debug:
+          print(self.nodeList[nState].qval)
         if not bestPlay[1] or self.nodeList[nState].qval > bestPlay[1]:
           bestPlay = (i, self.nodeList[nState].qval)
       else:
-        if not bestPlay[1] or 0 > bestPlay[1]:
+        if bestPlay[1] and 0 > bestPlay[1]:
           bestPlay = (i, 0)
 
     return bestPlay[0]

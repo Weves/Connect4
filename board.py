@@ -78,18 +78,18 @@ class Game:
       return True
 
     th = loc - 1
-    tv = t - 1
+    tv = h - 1
     for i in range(3):
-      if th < 0 or tv < 0 or self.board[th][tv] != player:
+      if th < 0 or tv < 0 or self.board[tv][th] != player:
         break
       else:
         d1count += 1
         th -= 1
         tv -= 1
     th = loc + 1
-    tv = t + 1
+    tv = h + 1
     for i in range(3):
-      if th >= 7 or tv >= 6 or self.board[th][tv] != player:
+      if th >= 7 or tv >= 6 or self.board[tv][th] != player:
         break
       else:
         d1count += 1
@@ -100,18 +100,18 @@ class Game:
       return True
 
     th = loc - 1
-    tv = t + 1
+    tv = h + 1
     for i in range(3):
-      if th < 0 or tv >= 6 or self.board[th][tv] != player:
+      if th < 0 or tv >= 6 or self.board[tv][th] != player:
         break
       else:
         d2count += 1
         th -= 1
         tv += 1
     th = loc + 1
-    tv = t - 1
+    tv = h - 1
     for i in range(3):
-      if th <= 7 or tv < 0 or self.board[th][tv] != player:
+      if th <= 7 or tv < 0 or self.board[tv][th] != player:
         break
       else:
         d2count += 1

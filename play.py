@@ -5,7 +5,7 @@ class Play:
   
   def __init__(self):
     self.player = player.Player()
-    self.player.train(.35, 1)
+    self.player.train(.2, .9)
     self.game = board.Game()
     self.playerMove = None
   
@@ -13,7 +13,7 @@ class Play:
     self.game.reset()
     board = player.Node('11111111111111', 0)
     while(True):
-      play = self.player.play(board.boardState)
+      play = self.player.play(board.boardState, True)
       board = player.Node(board.findNext(play, 1), 0)
       r = self.game.placePiece(play)
       if r == 1:
